@@ -62,17 +62,17 @@ def ask_waterfall_brain(bad_code, error_log):
     prompt = f"""Find the bug in this Python code based on the error log. Return ONLY the corrected code without explanations.
 CODE:\n{bad_code}\nERROR:\n{error_log[-700:]}"""
 
-    # Priority 1.A
+    # Priority 1.A (Set to unlimited timeout)
     print("\n🤖 [PRIORITY 1.A] Attempting direct REST call to GitLab Duo Ultimate...")
     try:
-        res = requests.post(f"{GITLAB_URL}/chat/completions", headers=GITLAB_HEADERS, json={"messages": [{"role": "user", "content": prompt}]}, timeout=8)
+        res = requests.post(f"{GITLAB_URL}/chat/completions", headers=GITLAB_HEADERS, json={"messages": [{"role": "user", "content": prompt}]}, timeout=None)
         if res.status_code == 200:
             print("🟢 [SUCCESS] Natively solved via GitLab Duo Ultimate Chat API!")
             return res.json()['choices'][0]['message']['content']
     except Exception:
         pass
 
-    # Priority 1.B
+    # Priority 1.B (Set to unlimited timeout)
     print("⚠️ Priority 1.A requires WebSocket Gateway. Tripping switch to Priority 1.B...")
     print("🧠 [PRIORITY 1.B] Rerouting to GitLab Duo 'Code Suggestions' REST Proxy...")
     engineered_file = f"""# ERROR TRACE:\n{error_log[-500:]}\n\n# ORIGINAL BUGGY CODE:\n{bad_code}\n\n# CORRECTED CLEAN PYTHON CODE:\n"""
@@ -84,7 +84,7 @@ CODE:\n{bad_code}\nERROR:\n{error_log[-700:]}"""
         }
     }
     try:
-        sugg_res = requests.post(f"{GITLAB_URL}/code_suggestions/completions", headers=GITLAB_HEADERS, json=sugg_payload, timeout=10)
+        sugg_res = requests.post(f"{GITLAB_URL}/code_suggestions/completions", headers=GITLAB_HEADERS, json=sugg_payload, timeout=None)
         if sugg_res.status_code == 200:
             ai_text = sugg_res.json().get('choices', [{}])[0].get('text', '')
             if ai_text and "def " in ai_text:
@@ -106,7 +106,7 @@ CODE:\n{bad_code}\nERROR:\n{error_log[-700:]}"""
 
 
 # =====================================================================
-# PHASE 4: THE AUTONOMOUS GIT COMMITTER (NEW)
+# PHASE 4: THE AUTONOMOUS GIT COMMITTER
 # =====================================================================
 def push_fixed_code_to_repo(file_path, new_content, branch="main"):
     """Autonomously overwrites the buggy file in the GitLab repository via API."""
